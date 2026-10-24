@@ -1,0 +1,13 @@
+{
+  "name": "levarona-ai",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "docx": "^9.5.1",
+    "express": "^4.21.2"
+  }
+}
