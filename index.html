@@ -345,7 +345,13 @@ formEl.addEventListener('submit', async (e) => {
     }
 
     const data = await res.json();
-    const answer = data.answer || data.response || 'No response received from AI backend.';
+ const answer = data.reply || data.answer || data.response;
+
+if (!answer) {
+  throw new Error('The AI server returned an empty answer.');
+}
+
+appendMessage('bot', answer);
     appendMessage('bot', answer);
 
   } catch (err) {
