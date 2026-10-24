@@ -59,9 +59,12 @@ async function callGemini(input) {
         input,
         system_instruction:
           'You are Levarona, a friendly and accurate educational AI tutor. Explain clearly, adapt to the student level, and answer in the language the student uses.',
-        generation_config: {
-          temperature: 0.5,
-          max_output_tokens: 1800
+        
+generation_config: {
+  thinking_level: 'medium',
+  max_output_tokens: 4096
+},
+
         },
         store: false
       })
