@@ -1,4 +1,4 @@
- we import express from 'express';
+ import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
@@ -10,58 +10,11 @@ app.use(express.json({ limit: '20mb' }));
 app.use(express.static(__dirname));
 
 const PORT = process.env.PORT || 3000;
-const API_KEY = process.env.GEMINI_API_KEY;
-const CHAT_MODEL =
+const API_KEY = (process.env.GEMINI_API_KEY || '').trim();
 
-const express = require('express');
-const app = express();
-
-// Middleware to parse JSON and serve your static frontend files (index.html, etc.)
-app.use(express.json());
-app.use(express.static('.'));
-
-// Handle the /api/word route called by your frontend
-app.post('/api/word', async (req, res) => {
-    try {
-        const { subject, level, prompt } = req.body;
-        const apiKey = process.env.GEMINI_API_KEY; // Reads the secret key safely from Bento
-
-        if (!apiKey) {
-            return res.status(500).json({ error: "GEMINI_API_KEY is not configured on the server." });
-        }
-
-        // Build the prompt for Gemini based on user input
-        const userPrompt = prompt || `Create a study guide for ${subject} at level ${level}`;
-
-        // Call Google Gemini API securely from the backend
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: userPrompt }] }]
-            })
-        });
-
-        const data = await response.json();
-
-        if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
-            const aiReply = data.candidates[0].content.parts[0].text;
-            // Send the AI response back to your web app frontend
-            res.json({ success: true, text: aiReply });
-        } else {
-            res.status(500).json({ error: "Failed to get a response from Gemini." });
-        }
-    } catch (error) {
-        console.error("Server Error:", error);
-        res.status(500).json({ error: "Internal server error." });
-    }
-});
-
-// Start the server on Bento's designated port
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Levarona AI server running on port ${PORT}`));
- process.env.GEMINI_CHAT_MODEL || 'gemini-3.8-flash';
-const IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image';
+// تنظيف وتثبيت اسم الموديل لمنع أي خطأ في الرابط
+const CHAT_MODEL = (process.env.GEMINI_CHAT_MODEL || process.env.GEMINI_MODEL || 'gemini-1.5-flash').trim();
+const IMAGE_MODEL = (process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image').trim();
 
 app.get('/api/health', (_req, res) => {
   res.json({
@@ -107,41 +60,33 @@ function extractText(data) {
   return texts.join('\n').trim();
 }
 
-async function callGemini(input) {
+async function callGemini(promptText) {
   if (!API_KEY) {
     throw new Error('GEMINI_API_KEY is missing from hosting settings.');
   }
 
-  // 25-second timeout safeguard to prevent infinite hanging on hard equations
+  const targetUrl = `https://generativelanguage.googleapis.com/v1beta/models/${CHAT_MODEL}:generateContent?key=${API_KEY}`;
+  
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 25000);
 
   try {
-    const response = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/interactions',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': API_KEY
-        },
-        body: JSON.stringify({
-          model: CHAT_MODEL,
-          input,
-          system_instruction:
-            'You are Levarona, an expert educational AI tutor. Automatically detect the subject and difficulty level from the student query. Never ask the student to specify a subject or lesson name. Provide direct, precise, step-by-step answers immediately. Do not include conversational filler, greetings, or polite chat padding. Go straight to the answer and explanation in the language used by the student.',
-          generation_config: {
-            temperature: 0.3,
-            max_output_tokens: 2048
-          },
-          store: false
-        }),
-        signal: controller.signal
-      }
-    );
+    const response = await fetch(targetUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: promptText }] }],
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 2048
+        }
+      }),
+      signal: controller.signal
+    });
 
     clearTimeout(timeoutId);
-
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
@@ -152,7 +97,7 @@ async function callGemini(input) {
   } catch (error) {
     clearTimeout(timeoutId);
     if (error.name === 'AbortError') {
-      throw new Error('The request took too long and timed out. Please try a simpler question or break it into smaller steps.');
+      throw new Error('The request took too long and timed out. Please try a simpler question.');
     }
     throw error;
   }
@@ -175,9 +120,7 @@ app.post('/api/chat', async (req, res) => {
     const previousMessages = (Array.isArray(history) ? history : [])
       .slice(-10)
       .filter(item => item && typeof item.content === 'string')
-      .map(item => 
-        `${item.role === 'assistant' || item.role === 'model' ? 'Assistant' : 'Student'}: ${item.content.slice(0, 4000)}`
-      )
+      .map(item => `${item.role === 'assistant' || item.role === 'model' ? 'Assistant' : 'Student'}: ${item.content.slice(0, 4000)}`)
       .join('\n\n');
 
     const attachmentNotes = (Array.isArray(attachments) ? attachments : [])
@@ -187,7 +130,7 @@ app.post('/api/chat', async (req, res) => {
       .join('\n\n');
 
     const prompt = [
-      `Context -> Subject: ${effectiveSubject} | Level: ${effectiveLevel} | Mode: ${mode}`,
+      `System: You are Levarona, an expert educational AI tutor for ${effectiveSubject} at ${effectiveLevel} level. Mode: ${mode}. Provide direct, step-by-step answers without filler.`,
       previousMessages ? `Conversation History:\n${previousMessages}` : '',
       attachmentNotes ? `Attachments:\n${attachmentNotes}` : '',
       `Student's question:\n${String(message).slice(0, 15000)}`
@@ -197,68 +140,13 @@ app.post('/api/chat', async (req, res) => {
     const reply = extractText(data);
 
     if (!reply) {
-      throw new Error('Gemini returned an empty response. Please try rephrasing your question.');
+      throw new Error('Gemini returned an empty response.');
     }
 
     res.json({ reply });
-
   } catch (error) {
     console.error('Chat error:', error.message);
     res.status(500).json({ error: error.message || 'Chat request failed.' });
-  }
-});
-
-app.post('/api/image', async (req, res) => {
-  try {
-    const { prompt = '', subject = 'General', level = 'General' } = req.body || {};
-
-    if (!String(prompt).trim()) {
-      return res.status(400).json({ error: 'Describe the image first.' });
-    }
-    if (!API_KEY) {
-      throw new Error('GEMINI_API_KEY is missing from hosting settings.');
-    }
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': API_KEY
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `Create an educational illustration. Subject: ${subject}. Student level: ${level}. Request: ${prompt}`
-            }]
-          }],
-          generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
-        }),
-        signal: controller.signal
-      }
-    );
-
-    clearTimeout(timeoutId);
-
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data?.error?.message || `Image API error ${response.status}`);
-    }
-
-    const image = (data?.candidates?.[0]?.content?.parts || [])
-      .find(part => part?.inlineData?.data)?.inlineData?.data;
-
-    if (!image) throw new Error('No image returned. Check image model access and quota.');
-
-    res.json({ image });
-
-  } catch (error) {
-    console.error('Image error:', error.message);
-    res.status(500).json({ error: error.message || 'Image generation failed.' });
   }
 });
 
@@ -287,7 +175,6 @@ app.post('/api/word', async (req, res) => {
     );
     res.setHeader('Content-Disposition', 'attachment; filename="Levarona_Lesson.docx"');
     res.send(buffer);
-
   } catch (error) {
     console.error('Word export error:', error.message);
     res.status(500).json({ error: error.message || 'Word export failed.' });
