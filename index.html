@@ -26,32 +26,21 @@ header p{font-size:13px;color:var(--muted)}
 .msg{padding:10px 14px;border-radius:12px;max-width:85%;line-height:1.5;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
 .msg.user{background:var(--primary);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
 .msg.bot{background:var(--panel);color:var(--text);align-self:flex-start;border:1px solid var(--line);border-bottom-left-radius:4px}
-.msg.error{background:#7f1d1d;color:#fecaca;border:1px solid #b91c1c}
 .composer{display:flex;gap:8px;margin-top:12px}
 .composer textarea{flex:1;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px;resize:none;height:48px}
 .composer textarea:focus{outline:none;border-color:var(--primary)}
 .send{background:var(--primary);color:#fff;border:0;padding:0 20px;border-radius:10px;font-weight:600;cursor:pointer;transition:background .2s}
 .send:hover{background:var(--primary-hover)}
-.toolsPanel{margin-top:12px}
-.toolsTitle{font-weight:750;margin-bottom:8px}
-.toolButtons{display:flex;gap:8px;flex-wrap:wrap}
-.attachments{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.attachment{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:6px 8px;max-width:100%;font-size:13px}
-.attachment img{width:42px;height:42px;object-fit:cover;border-radius:7px}
-.attachment span{max-width:190px;overflow-wrap:anywhere}
-.attachment button{border:0;background:transparent;cursor:pointer;color:#a33}
-.toolsPanel .notice{margin-bottom:0}
 .send:disabled{opacity:.65;cursor:wait}
-.generatedImage{max-width:100%;width:min(560px,100%);border-radius:12px;display:block;margin-top:8px}
-.actionStatus{font-size:13px;color:var(--muted);margin-top:8px;white-space:pre-wrap}
-</style></head>
+</style>
+</head>
 <body>
 <main class="app">
 <header>
 <div class="logo">L</div>
 <div>
 <h1>Levarona AI</h1>
-<p>Eight-subject tutor · Local curriculum + optional live AI</p>
+<p>Eight-subject tutor · Connected live AI</p>
 </div>
 </header>
 <section class="panel">
@@ -67,7 +56,7 @@ header p{font-size:13px;color:var(--muted)}
 <option>French</option>
 <option>German</option>
 <option>Arabic</option>
-<option>All subjects</option>
+<option>General</option>
 </select>
 </div>
 <div>
@@ -84,7 +73,6 @@ header p{font-size:13px;color:var(--muted)}
 <label for="mode">What do you need?</label>
 <select id="mode">
 <option>Explain</option>
-<option>Find in curriculum</option>
 <option>Practice</option>
 <option>Quiz</option>
 </select>
@@ -92,360 +80,88 @@ header p{font-size:13px;color:var(--muted)}
 </div>
 <div class="chips">
 <button class="chip" type="button" onclick="quick('Explain the current topic from the beginning with examples')">Explain from zero</button>
-<button class="chip" type="button" onclick="document.getElementById('mode').value='Practice';quick('Give me practice questions with answers')">Practice + answers</button>
-<button class="chip" type="button" onclick="document.getElementById('mode').value='Quiz';quick('Quiz me on this subject')">Quiz me</button>
-<button class="chip" type="button" onclick="quick('Show the main topics in this subject')">Show topic map</button>
-</div>
-<div class="status">
-<span class="tag">Original source included</span>
-<span class="tag">Suggested additions labelled separately</span>
-<span class="tag" id="countTag">Loading knowledge…</span>
+<button class="chip" type="button" onclick="quick('Give me practice questions with answers')">Practice + answers</button>
+<button class="chip" type="button" onclick="quick('Quiz me on this subject')">Quiz me</button>
 </div>
 </section>
+
 <section id="chat" class="panel chat" aria-live="polite">
-<div class="msg bot">Hi! 👋 أنا Levarona، مدرسك للمذاكرة.
-
-اختار مادة واسألني عن أي درس. أقدر أبحث في محتوى Levarona الأصلي المضمّن وأعرض أجزاء مرتبطة بسؤالك، وكمان أقدّم دروسًا إضافية موضّحة بوضوح إنها إضافات.
-
-تنبيه مهم: النسخة دي بتشتغل بدون إنترنت للبحث في قاعدة المعرفة، لكنها ليست نموذج ذكاء اصطناعي متصلًا؛ الإجابات المفتوحة خارج المحتوى المضمّن تحتاج ربطًا بخادم AI.</div>
+<div class="msg bot">Hi! 👋 أنا Levarona، مدرسك الذكي. اسألني عن أي درس أو مادة وسأقوم بمساعدتك فوراً.</div>
 </section>
+
 <form class="composer" id="form">
 <textarea id="prompt" placeholder="اكتب سؤالك بالعربي أو English…" required></textarea>
-<button class="send" type="submit">Send</button>
+<button class="send" id="sendBtn" type="submit">Send</button>
 </form>
-
-<section class="panel toolsPanel">  
-  <div class="toolsTitle">📎 أدوات Levarona</div>  
-  <div class="toolButtons">  
-    <button type="button" class="chip" id="pickPhoto">🖼️ إضافة صورة</button>  
-    <button type="button" class="chip" id="pickFile">📄 إضافة ملف</button>  
-    <button type="button" class="chip" id="takePhoto">📷 الكاميرا</button>  
-    <button type="button" class="chip" id="makeWord">📝 إنشاء Word</button>  
-    <button type="button" class="chip" id="makeImage">🎨 إنشاء صورة تعليمية</button>  
-  </div>  
-  <input id="photoInput" type="file" accept="image/*" hidden>  
-  <input id="cameraInput" type="file" accept="image/*" capture="environment" hidden>  
-  <input id="fileInput" type="file" accept=".pdf,.txt,.md,.doc,.docx,.ppt,.pptx,.csv,.xls,.xlsx,.json,.html" multiple hidden>  
-  <div id="attachments" class="attachments"></div>  
-  <p class="notice">تقدر ترفق صور أو ملفات مع سؤالك. الكاميرا تعتمد على دعم المتصفح والجهاز. إنشاء Word والصور يحتاج تشغيل خادم Levarona ومفتاح API مضبوط، وقد يترتب عليه استخدام مدفوع للخدمة.</p>  
-</section>
-<p class="notice" id="connectionNotice">بيتم تجربة الاتصال بالذكاء الاصطناعي. لو مش متوصل، النسخة المحلية هتبحث في المحتوى المضمّن. للردود الذكية المفتوحة شغّل الخادم وأضف مفتاح API في ملف .env — المفتاح لا يوضع في المتصفح.</p>
-<details>
-<summary>About this build</summary>
-<p class="small">This edition embeds the complete source text in the app and includes a separate file of suggested lesson expansions for all eight subjects. It performs local keyword search and basic study-mode responses. It does not claim that every possible fact in each subject is included or that a live generative AI service is connected.</p>
-</details>
 </main>
+
 <script>
-const SOURCE="Yes. I’ll give you the **actual subject knowledge**, not the IB subject-selection information.\n\nOne correction: you originally listed **8 subjects** (Physics, Chemistry, Biology, Math, English, French, German, Arabic). Since you now said 6, I’ll cover the **six academic subjects most relevant to the knowledge base we were building: Physics, Chemistry, Biology, Mathematics, English, and Arabic**. If you meant a different six, tell me afterward.\n\nThis is a **large core knowledge base**, from foundations toward advanced level. It still cannot literally contain every fact ever known in one message, but this is much more than a simple topic list.\n\n---\n\n# 🔵 1. PHYSICS\n\n## A. Measurements\n\n### SI units\n- Length → metre (m)\n- Mass → kilogram (kg)\n- Time → second (s)\n- Temperature → kelvin (K)\n- Electric current → ampere (A)\n- Amount → mole (mol)\n\nDerived:\n- Force → newton (N)\n- Energy → joule (J)\n- Power → watt (W)\n- Pressure → pascal (Pa)\n- Charge → coulomb (C)\n- Voltage → volt (V)\n- Resistance → ohm (Ω)\n\n### Scalars and vectors\n**Scalar:** magnitude only.\nExamples: mass, time, temperature, distance, speed.\n\n**Vector:** magnitude + direction.\nExamples: displacement, velocity, acceleration, force, momentum.\n\n---\n\n## B. Motion\n\n**Distance:** total path travelled.\n\n**Displacement:** change in position in a particular direction.\n\n**Speed:**\n\n$$\nspeed=\\frac{distance}{time}\n$$\n\n**Velocity:**\n\n$$\nvelocity=\\frac{displacement}{time}\n$$\n\n**Acceleration:**\n\n$$\na=\\frac{v-u}{t}\n$$\n\nwhere:\n- `u` = initial velocity\n- `v` = final velocity\n- `t` = time\n\nFor constant acceleration:\n\n$$\nv=u+at\n$$\n\n$$\ns=ut+\\frac12at^2\n$$\n\n$$\nv^2=u^2+2as\n$$\n\n$$\ns=\\frac{u+v}{2}t\n$$\n\n### Graphs\n- Distance-time gradient → speed\n- Velocity-time gradient → acceleration\n- Area under velocity-time graph → displacement\n\n---\n\n## C. Forces\n\nA **force** is an interaction that can change an object's motion or shape.\n\n### Newton's laws\n\n**First law:** An object remains at rest or moves at constant velocity unless a resultant force acts on it.\n\n**Second law:**\n\n$$\nF=ma\n$$\n\n**Third law:** When two objects interact, they exert equal and opposite forces on each other.\n\n### Weight\n\n$$\nW=mg\n$$\n\nMass is measured in kg; weight is measured in N.\n\n### Common forces\n- Weight\n- Normal reaction\n- Friction\n- Air resistance\n- Tension\n- Upthrust\n- Spring force\n- Magnetic force\n- Electric force\n\n### Friction\nFriction opposes relative motion or attempted relative motion.\n\n### Springs\n\nHooke's law:\n\n$$\nF=kx\n$$\n\nwhere `k` is the spring constant.\n\n---\n\n## D. Momentum\n\n$$\np=mv\n$$\n\nMomentum is conserved in an isolated system.\n\nImpulse:\n\n$$\nF\\Delta t=\\Delta p\n$$\n\nApplications:\n- Collisions\n- Explosions\n- Recoil\n- Safety systems\n\n---\n\n## E. Energy\n\n### Kinetic energy\n\n$$\nKE=\\frac12mv^2\n$$\n\n### Gravitational potential energy\n\n$$\nGPE=mgh\n$$\n\n### Elastic energy\n\n$$\nE=\\frac12kx^2\n$$\n\n### Work\n\n$$\nW=Fd\n$$\n\nwhen force acts in the direction of movement.\n\n### Power\n\n$$\nP=\\frac{E}{t}\n$$\n\n### Efficiency\n\n$$\nEfficiency=\\frac{useful\\ output}{total\\ input}\\times100\\%\n$$\n\nEnergy is conserved, although it can be transferred into less useful forms such as thermal energy.\n\n---\n\n## F. Density and pressure\n\n$$\ndensity=\\frac{mass}{volume}\n$$\n\n$$\nP=\\frac{F}{A}\n$$\n\nFor a liquid:\n\n$$\nP=\\rho gh\n$$\n\n---\n\n## G. Circular motion\n\nCentripetal acceleration:\n\n$$\na=\\frac{v^2}{r}\n$$\n\nCentripetal force:\n\n$$\nF=\\frac{mv^2}{r}\n$$\n\nThe centripetal force points toward the centre.\n\n---\n\n## H. Gravitation\n\nNewton's law of universal gravitation:\n\n$$\nF=G\\frac{m_1m_2}{r^2}\n$$\n\nObjects with mass attract one another.\n\n---\n\n## I. Waves\n\nImportant terms:\n- Amplitude\n- Wavelength\n- Frequency\n- Period\n- Wave speed\n\n$$\nv=f\\lambda\n$$\n\n$$\nT=\\frac1f\n$$\n\n### Types\n**Transverse:** oscillation perpendicular to wave direction.\n\n**Longitudinal:** oscillation parallel to wave direction.\n\n### Wave phenomena\n- Reflection\n- Refraction\n- Diffraction\n- Interference\n- Superposition\n\nSound is mechanical; electromagnetic waves can travel through vacuum.\n\n---\n\n## J. Light\n\nReflection:\n\n**angle of incidence = angle of reflection**\n\nRefraction:\n\n$$\nn_1\\sin\\theta_1=n_2\\sin\\theta_2\n$$\n\nRefractive index:\n\n$$\nn=\\frac{c}{v}\n$$\n\n### Electromagnetic spectrum\n\nFrom low frequency/long wavelength to high frequency/short wavelength:\n\n**Radio → Microwave → Infrared → Visible → Ultraviolet → X-ray → Gamma**\n\n---\n\n## K. Electricity\n\nCurrent:\n\n$$\nI=\\frac{Q}{t}\n$$\n\nVoltage:\n\n$$\nV=\\frac{W}{Q}\n$$\n\nResistance:\n\n$$\nR=\\frac VI\n$$\n\nPower:\n\n$$\nP=VI\n$$\n\nAlso:\n\n$$\nP=I^2R\n$$\n\n$$\nP=\\frac{V^2}{R}\n$$\n\nEnergy:\n\n$$\nE=Pt\n$$\n\n### Series circuits\n- Same current\n- Voltage is shared\n\n### Parallel circuits\n- Same voltage across branches\n- Current divides\n\n---\n\n## L. Magnetism\n\nElectric current produces magnetic fields.\n\nA current-carrying conductor can experience a force in a magnetic field.\n\nApplications:\n- Motors\n- Generators\n- Transformers\n- Speakers\n- Electromagnetic devices\n\n---\n\n## M. Thermal physics\n\nSpecific heat capacity:\n\n$$\nQ=mc\\Delta T\n$$\n\nSpecific latent heat:\n\n$$\nQ=mL\n$$\n\nIdeal gas:\n\n$$\nPV=nRT\n$$\n\nThermodynamics studies heat, work and internal energy.\n\n---\n\n## N. Atomic and nuclear physics\n\nAtom:\n- Proton → positive\n- Neutron → neutral\n- Electron → negative\n\nAtomic number = number of protons.\n\nMass number = protons + neutrons.\n\n**Isotopes:** same number of protons, different numbers of neutrons.\n\nRadioactivity:\n- Alpha\n- Beta\n- Gamma\n\nHalf-life = time required for the amount/activity of a radioactive sample to fall to half its initial value.\n\nMass-energy:\n\n$$\nE=mc^2\n$$\n\n### Advanced physics\n- Quantum mechanics\n- Relativity\n- Particle physics\n- Nuclear physics\n- Astrophysics\n- Cosmology\n- Statistical mechanics\n- Quantum field theory\n\n---\n\n# 🟠 2. CHEMISTRY\n\n## A. Matter\n\nMatter can be:\n- Elements\n- Compounds\n- Mixtures\n\n### Element\nMade of atoms with the same number of protons.\n\n### Compound\nTwo or more elements chemically bonded.\n\n### Mixture\nSubstances physically combined.\n\n---\n\n## B. Atomic structure\n\n- Proton → +1\n- Neutron → 0\n- Electron → −1\n\nAtomic number = protons.\n\nMass number = protons + neutrons.\n\n---\n\n## C. Periodic table\n\nElements are arranged by atomic number.\n\nImportant groups include:\n- Group 1 → alkali metals\n- Group 2 → alkaline earth metals\n- Group 17 → halogens\n- Group 18 → noble gases\n\nPeriodic trends include:\n- Atomic radius\n- Ionization energy\n- Electronegativity\n- Reactivity\n\n---\n\n## D. Bonding\n\n### Ionic\nElectrons are transferred and oppositely charged ions attract.\n\n### Covalent\nAtoms share electrons.\n\n### Metallic\nMetal atoms form a structure involving delocalized electrons.\n\nBonding affects:\n- Melting point\n- Boiling point\n- Conductivity\n- Solubility\n- Hardness\n\n---\n\n## E. Mole calculations\n\nOne mole contains approximately:\n\n$$\n6.022\\times10^{23}\n$$\n\nparticles.\n\n$$\nn=\\frac{m}{M}\n$$\n\nwhere:\n- `n` = moles\n- `m` = mass\n- `M` = molar mass\n\nSolution concentration:\n\n$$\nc=\\frac{n}{V}\n$$\n\nwith appropriate units.\n\n---\n\n## F. Chemical equations\n\nEquations must obey conservation of atoms.\n\nExample structure:\n\n**reactants → products**\n\nBalanced equations give the mole ratios needed for stoichiometric calculations.\n\n---\n\n## G. Acids and bases\n\nAcid → proton donor.\n\nBase → proton acceptor.\n\n$$\npH=-\\log[H^+]\n$$\n\nStrong acids ionize extensively; weak acids ionize partially.\n\nNeutralization often produces:\n\n**acid + base → salt + water**\n\n---\n\n## H. Redox\n\n**Oxidation:** loss of electrons.\n\n**Reduction:** gain of electrons.\n\nRemember:\n\n**OIL RIG**\n- Oxidation Is Loss\n- Reduction Is Gain\n\nOxidation states help track electron transfer.\n\n---\n\n## I. Energetics\n\nExothermic → releases energy.\n\nEndothermic → absorbs energy.\n\nCalorimetry:\n\n$$\nq=mc\\Delta T\n$$\n\nBond energies can estimate reaction enthalpy.\n\n---\n\n## J. Rates of reaction\n\nReaction rate can be affected by:\n- Temperature\n- Concentration\n- Pressure\n- Surface area\n- Catalyst\n\nA catalyst lowers activation energy by providing an alternative pathway.\n\n---\n\n## K. Equilibrium\n\nDynamic equilibrium occurs when forward and reverse reaction rates become equal in a closed system.\n\nLe Châtelier's principle helps predict responses to changes in:\n- Concentration\n- Pressure\n- Temperature\n\nA catalyst does not change the equilibrium position; it helps equilibrium establish faster.\n\n---\n\n## L. Organic chemistry\n\nMajor families:\n- Alkanes\n- Alkenes\n- Alkynes\n- Alcohols\n- Aldehydes\n- Ketones\n- Carboxylic acids\n- Esters\n- Amines\n- Amides\n- Haloalkanes\n- Aromatic compounds\n\n**Isomers:** same molecular formula but different structures/arrangements.\n\nAdvanced chemistry includes:\n- Organic synthesis\n- Spectroscopy\n- Electrochemistry\n- Quantum chemistry\n- Analytical chemistry\n- Biochemistry\n- Materials chemistry\n\n---\n\n# 🟢 3. BIOLOGY\n\n## A. Characteristics of life\n\nLiving systems generally show:\n- Organization\n- Metabolism\n- Growth\n- Response\n- Reproduction\n- Regulation/homeostasis\n- Adaptation\n\n---\n\n## B. Cell theory\n\nCells are fundamental units of life.\n\nCells arise from existing cells.\n\n### Prokaryotes\n- No membrane-bound nucleus\n- Usually smaller/simple\n- Bacteria and archaea\n\n### Eukaryotes\n- Nucleus\n- Membrane-bound organelles\n- Animals, plants, fungi, protists\n\n---\n\n## C. Cell organelles\n\n**Nucleus:** genetic material and gene regulation.\n\n**Ribosomes:** protein synthesis.\n\n**Mitochondria:** major site of aerobic respiration.\n\n**Chloroplasts:** photosynthesis.\n\n**Rough ER:** protein processing/transport.\n\n**Smooth ER:** lipid synthesis and other functions.\n\n**Golgi apparatus:** modifies and packages molecules.\n\n**Lysosomes:** intracellular digestion in many cells.\n\n**Cell membrane:** selective barrier.\n\n**Cell wall:** structural support.\n\n**Vacuole:** storage and water balance.\n\n---\n\n## D. Cell transport\n\n### Diffusion\nMovement from higher concentration to lower concentration.\n\n### Osmosis\nMovement of water across a selectively permeable membrane.\n\n### Active transport\nUses energy to move substances against a concentration/electrochemical gradient.\n\n### Endocytosis\nCell takes material in.\n\n### Exocytosis\nCell releases material.\n\n---\n\n## E. Biological molecules\n\n### Carbohydrates\nEnergy and structural roles.\n\n### Lipids\nEnergy storage, membranes and signaling.\n\n### Proteins\n- Enzymes\n- Transport\n- Structure\n- Movement\n- Receptors\n- Defense\n\n### Nucleic acids\nDNA and RNA.\n\n---\n\n## F. Enzymes\n\nEnzymes are biological catalysts.\n\nThey lower activation energy.\n\nImportant factors:\n- Temperature\n- pH\n- Substrate concentration\n- Enzyme concentration\n\nHigh temperatures can disrupt protein structure.\n\n---\n\n## G. DNA\n\nDNA stores hereditary information.\n\nBases:\n\n**A, T, C, G**\n\nBase pairing:\n\n**A ↔ T**\n\n**C ↔ G**\n\nRNA generally uses **U instead of T**.\n\n### Central information flow\n\n**DNA → RNA → protein**\n\nTranscription produces RNA.\n\nTranslation produces a polypeptide.\n\n---\n\n## H. Genetics\n\n**Gene:** DNA sequence associated with a functional product.\n\n**Allele:** version of a gene.\n\n**Genotype:** genetic makeup.\n\n**Phenotype:** observable characteristics produced by genotype and environment.\n\nInheritance can involve:\n- Dominant/recessive relationships\n- Codominance\n- Multiple alleles\n- Sex-linked inheritance\n- Polygenic traits\n\n---\n\n## I. Cell division\n\n### Mitosis\nProduces genetically similar cells and supports growth/repair.\n\n### Meiosis\nProduces haploid gametes and generates genetic variation.\n\nVariation arises through:\n- Crossing over\n- Independent assortment\n- Random fertilization\n- Mutation\n\n---\n\n## J. Respiration\n\nCellular respiration transfers energy into ATP.\n\nSimplified aerobic equation:\n\n**glucose + oxygen → carbon dioxide + water + energy**\n\nGlycolysis occurs in the cytosol.\n\nMost aerobic ATP production in eukaryotic cells involves mitochondria.\n\n---\n\n## K. Photosynthesis\n\nSimplified:\n\n**carbon dioxide + water + light → glucose + oxygen**\n\nPhotosynthesis occurs in chloroplasts in plants and algae.\n\n---\n\n## L. Human biology\n\n### Circulatory system\nHeart + blood + blood vessels.\n\n### Respiratory system\nGas exchange.\n\n### Digestive system\nBreakdown and absorption of nutrients.\n\n### Nervous system\nRapid communication.\n\n### Endocrine system\nHormonal communication.\n\n### Kidney\n- Filtration\n- Reabsorption\n- Water/ion regulation\n- Waste excretion\n\n### Immune system\nProtects against pathogens and abnormal cells.\n\n---\n\n## M. Homeostasis\n\nMaintaining internal conditions within suitable limits.\n\nExamples:\n- Body temperature\n- Blood glucose\n- Water balance\n\nNegative feedback generally opposes deviations from a set range.\n\n---\n\n## N. Evolution\n\nEvolution = change in inherited characteristics of populations across generations.\n\nMechanisms include:\n- Natural selection\n- Mutation\n- Genetic drift\n- Gene flow\n- Sexual selection\n\nSpeciation can occur when populations become reproductively isolated.\n\n---\n\n## O. Ecology\n\nLevels:\n**Organism → Population → Community → Ecosystem → Biosphere**\n\nTopics:\n- Food chains\n- Food webs\n- Energy flow\n- Population growth\n- Competition\n- Predation\n- Mutualism\n- Carbon cycle\n- Nitrogen cycle\n- Water cycle\n- Biodiversity\n- Conservation\n\nAdvanced:\n- Molecular biology\n- Neuroscience\n- Immunology\n- Biotechnology\n- Genomics\n- Gene editing\n- Bioinformatics\n\n---\n\n# 🔴 4. MATHEMATICS\n\n## A. Number systems\n\n- Natural numbers\n- Whole numbers\n- Integers\n- Rational numbers\n- Irrational numbers\n- Real numbers\n- Complex numbers\n\n---\n\n## B. Arithmetic\n\nOperations:\n- Addition\n- Subtraction\n- Multiplication\n- Division\n- Powers\n- Roots\n\nFractions:\n\n$$\n\\frac ab+\\frac cd=\\frac{ad+bc}{bd}\n$$\n\nPercent change:\n\n$$\n\\frac{new-old}{old}\\times100\\%\n$$\n\n---\n\n## C. Algebra\n\nDistributive law:\n\n$$\na(b+c)=ab+ac\n$$\n\nDifference of squares:\n\n$$\na^2-b^2=(a-b)(a+b)\n$$\n\nQuadratic formula:\n\n$$\nx=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}\n$$\n\nFor:\n\n$$\nax^2+bx+c=0\n$$\n\nDiscriminant:\n\n$$\nb^2-4ac\n$$\n\n---\n\n## D. Exponents\n\n$$\na^ma^n=a^{m+n}\n$$\n\n$$\n\\frac{a^m}{a^n}=a^{m-n}\n$$\n\n$$\n(a^m)^n=a^{mn}\n$$\n\n$$\na^{-n}=\\frac1{a^n}\n$$\n\n---\n\n## E. Logarithms\n\n$$\n\\log(ab)=\\log a+\\log b\n$$\n\n$$\n\\log(a/b)=\\log a-\\log b\n$$\n\n$$\n\\log(a^n)=n\\log a\n$$\n\n### Exponential and logarithmic functions\nInverse relationship:\n\n$$\ny=b^x \\iff x=\\log_b(y)\n$$\n\n---\n\n## F. Trigonometry\n\nRight-angled triangle:\n\n$$\n\\sin\\theta=\\frac{opp}{hyp}, \\quad \\cos\\theta=\\frac{adj}{hyp}, \\quad \\tan\\theta=\\frac{opp}{adj}\n$$\n\nIdentities:\n\n$$\n\\sin^2\\theta+\\cos^2\\theta=1\n$$\n\nSine rule:\n\n$$\n\\frac{a}{\\sin A}=\\frac{b}{\\sin B}=\\frac{c}{\\sin C}\n$$\n\nCosine rule:\n\n$$\nc^2=a^2+b^2-2ab\\cos C\n$$\n\n---\n\n## G. Calculus\n\n### Differentiation\n\n$$\n\\frac{d}{dx}(x^n)=nx^{n-1}\n$$\n\nDerivative represents rate of change / gradient of tangent.\n\n### Integration\n\n$$\n\\int x^n dx = \\frac{x^{n+1}}{n+1} + C\n$$\n\nIntegral represents accumulation / area under curve.\n\n---\n\n## H. Statistics and probability\n\nMean, median, mode, range, standard deviation.\n\nProbability:\n\n$$\nP(A)=\\frac{\\text{favorable}}{\\text{total}}\n$$\n\nMutually exclusive events, independent events, conditional probability.\n\n---\n\n# 🟣 5. ENGLISH\n\n- Reading comprehension\n- Essay structure (Introduction, body paragraphs, conclusion)\n- Grammar and syntax\n- Vocabulary development\n- Literary devices (metaphor, simile, personification, alliteration, symbolism)\n- Critical analysis\n\n---\n\n# 🟤 6. ARABIC\n\n- قواعد النحو والصرف (إعراب، أفعال، أسماء)\n- البلاغة والفصاحة (تشبيه، استعارة، كناية)\n- القراءة والفهم والتحليل الأدبي\n- الإنشاء والتعبير وكتابة المقالات\n\n---\n\n# ⚪ 7. FRENCH & 🟢 8. GERMAN\n\n- Basic greetings and vocabulary\n- Present tense verbs and common conjugations\n- Sentence structure and basic grammar rules\n- Reading and simple conversation practice\n";
+const chatHistory = [];
 
-let attachmentsList = [];
-let isSubmitting = false;
+document.getElementById('form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const promptInput = document.getElementById('prompt');
+    const sendBtn = document.getElementById('sendBtn');
+    const userText = promptInput.value.trim();
+    if (!userText) return;
 
-const chatEl = document.getElementById('chat');
-const formEl = document.getElementById('form');
-const promptEl = document.getElementById('prompt');
-const countTag = document.getElementById('countTag');
-const connectionNotice = document.getElementById('connectionNotice');
-const attachmentsContainer = document.getElementById('attachments');
+    const subject = document.getElementById('subject').value;
+    const level = document.getElementById('level').value;
+    const mode = document.getElementById('mode').value;
 
-// Initialize knowledge count display
-function initKnowledgeCount() {
-  if (SOURCE) {
-    const words = SOURCE.split(/\s+/).length;
-    countTag.textContent = `Knowledge loaded: ~${words} words`;
-  } else {
-    countTag.textContent = 'Knowledge base loaded';
-  }
-}
-initKnowledgeCount();
+    // إظهار رسالة المستخدم
+    appendMessage("user", userText);
+    chatHistory.push({ role: "user", content: userText });
+    promptInput.value = "";
 
-// Check backend health on load
-async function checkBackend() {
-  try {
-    const res = await fetch('/api/health', { method: 'GET', signal: AbortSignal.timeout(3000) });
-    if (res.ok) {
-      connectionNotice.textContent = '🟢 Connected to Levarona AI backend server.';
-      connectionNotice.style.color = '#34d399';
-    } else {
-      throw new Error('Server returned error');
+    // إظهار مؤشر الانتظار
+    const loadingMsg = appendMessage("bot", "⏳ جارِ التفكير والبحث...");
+    sendBtn.disabled = true;
+
+    try {
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: userText,
+                subject: subject,
+                level: level,
+                mode: mode,
+                history: chatHistory
+            })
+        });
+
+        const data = await response.json();
+        loadingMsg.remove();
+
+        if (response.ok && data.reply) {
+            appendMessage("bot", data.reply);
+            chatHistory.push({ role: "assistant", content: data.reply });
+        } else {
+            appendMessage("bot", "⚠️ " + (data.error || "حدث خطأ غير متوقع."));
+        }
+    } catch (error) {
+        loadingMsg.remove();
+        appendMessage("bot", "⚠️ خطأ في الاتصال بالخادم.");
+    } finally {
+        sendBtn.disabled = false;
     }
-  } catch (err) {
-    connectionNotice.textContent = '🟡 Offline mode: Using local embedded curriculum knowledge. (Start backend server for live AI).';
-    connectionNotice.style.color = '#fbbf24';
-  }
-}
-checkBackend();
+});
 
-// Attachments button event listeners
-document.getElementById('pickPhoto').addEventListener('click', () => document.getElementById('photoInput').click());
-document.getElementById('pickFile').addEventListener('click', () => document.getElementById('fileInput').click());
-document.getElementById('takePhoto').addEventListener('click', () => document.getElementById('cameraInput').click());
-
-document.getElementById('photoInput').addEventListener('change', (e) => handleFiles(e.target.files));
-document.getElementById('cameraInput').addEventListener('change', (e) => handleFiles(e.target.files));
-document.getElementById('fileInput').addEventListener('change', (e) => handleFiles(e.target.files));
-
-function handleFiles(files) {
-  for (const file of files) {
-    attachmentsList.push(file);
-  }
-  renderAttachments();
-}
-
-function renderAttachments() {
-  attachmentsContainer.innerHTML = '';
-  attachmentsList.forEach((file, index) => {
+function appendMessage(sender, text) {
+    const chatBox = document.getElementById('chat');
     const div = document.createElement('div');
-    div.className = 'attachment';
-    
-    if (file.type.startsWith('image/')) {
-      const img = document.createElement('img');
-      img.src = URL.createObjectURL(file);
-      div.appendChild(img);
-    } else {
-      const icon = document.createElement('span');
-      icon.textContent = '📄';
-      div.appendChild(icon);
-    }
-    
-    const nameSpan = document.createElement('span');
-    nameSpan.textContent = file.name;
-    div.appendChild(nameSpan);
-
-    const removeBtn = document.createElement('button');
-    removeBtn.type = 'button';
-    removeBtn.textContent = '✕';
-    removeBtn.onclick = () => {
-      attachmentsList.splice(index, 1);
-      renderAttachments();
-    };
-    div.appendChild(removeBtn);
-
-    attachmentsContainer.appendChild(div);
-  });
+    div.className = `msg ${sender}`;
+    div.textContent = text;
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
+    return div;
 }
 
-// Local knowledge search function with robust keyword matching
-function searchLocalKnowledge(query, subject) {
-  const q = query.toLowerCase();
-  const paragraphs = SOURCE.split('\n\n');
-  let matches = [];
-  
-  for (const p of paragraphs) {
-    const pLower = p.toLowerCase();
-    const queryWords = q.split(/\s+/).filter(w => w.length > 2);
-    let matchCount = 0;
-    for (const w of queryWords) {
-      if (pLower.includes(w)) matchCount++;
-    }
-    if (matchCount > 0 || pLower.includes(q)) {
-      matches.push({ text: p, score: matchCount });
-    }
-  }
-  
-  matches.sort((a, b) => b.score - a.score);
-  
-  if (matches.length > 0) {
-    let result = "📚 **نتائج البحث المحلي في محتوى Levarona:**\n\n";
-    const topMatches = matches.slice(0, 3);
-    for (const m of topMatches) {
-      result += m.text + "\n\n---\n\n";
-    }
-    result += "_(ملاحظة: هذه إجابة من قاعدة المعرفة المحلية المضمّنة لعدم توفر اتصال بالخادم المباشر للذكاء الاصطناعي)_";
-    return result;
-  }
-  
-  return `عذراً، لم أجد إجابة مطابقة تماماً لسؤالك في محتوى "${subject}" المحلي المضمّن. يمكنك تشغيل خادم Levarona الخلفي للحصول على إجابات مفتوحة عبر نموذج الذكاء الاصطناعي المتصل.`;
-}
-
-// Quick action chip helper
 function quick(text) {
-  promptEl.value = text;
-  promptEl.focus();
+    document.getElementById('prompt').value = text;
+    document.getElementById('form').dispatchEvent(new Event('submit'));
 }
-
-// Append message to chat interface
-function appendMessage(sender, text, isError = false, extraHtml = null) {
-  const msgDiv = document.createElement('div');
-  msgDiv.className = `msg ${sender}`;
-  if (isError) msgDiv.classList.add('error');
-  
-  msgDiv.textContent = text;
-  if (extraHtml) {
-    msgDiv.appendChild(extraHtml);
-  }
-  
-  chatEl.appendChild(msgDiv);
-  chatEl.scrollTop = chatEl.scrollHeight;
-  return msgDiv;
-}
-// Form submission handling with robust fetch() implementation
-formEl.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  if (isSubmitting) return;
-
-  const question = promptEl.value.trim();
-  if (!question) return;
-
-  const subject = document.getElementById('subject').value;
-  const level = document.getElementById('level').value;
-  const mode = document.getElementById('mode').value;
-
-  // Append user message
-  appendMessage('user', question);
-  promptEl.value = '';
-  const currentAttachments = [...attachmentsList];
-  attachmentsList = [];
-  renderAttachments();
-
-  isSubmitting = true;
-  const sendBtn = formEl.querySelector('.send');
-  sendBtn.disabled = true;
-
-  // Loading indicator
-  const loadingMsg = appendMessage('bot', '⏳ جارٍ التفكير والبحث...');
-
-  try {
-    // Prepare FormData for multipart requests if attachments exist, otherwise JSON
-    let res;
-    if (currentAttachments.length > 0) {
-      const formData = new FormData();
-      formData.append('prompt', question);
-      formData.append('subject', subject);
-      formData.append('level', level);
-      formData.append('mode', mode);
-      currentAttachments.forEach((file) => {
-        formData.append('files', file);
-      });
-
-      res = await fetch('/api/chat', {
-        method: 'POST',
-        body: formData
-      });
-    } else {
-      res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: question, subject, level, mode })
-      });
-    }
-
-    loadingMsg.remove();
-
-    if (!res.ok) {
-      // Handle HTTP error status codes explicitly (400, 401, 403, 404, 429, 500, etc.)
-      let errorMsg = `Server error (${res.status})`;
-      try {
-        const errData = await res.json();
-        if (errData && errData.error) errorMsg = errData.error;
-      } catch (e) {
-        // response wasn't JSON
-      }
-      throw new Error(errorMsg);
-    }
-
-    const data = await res.json();
- const answer = data.reply || data.answer || data.response;
-
-if (!answer) {
-  throw new Error('The AI server returned an empty answer.');
-}
-
-appendMessage('bot', answer);
-    appendMessage('bot', answer);
-
-  } catch (err) {
-    loadingMsg.remove();
-    console.warn('Backend fetch failed or unavailable, falling back to local curriculum search:', err);
-    
-    // Fallback to local knowledge base search if backend is offline or fails
-    const localAnswer = searchLocalKnowledge(question, subject);
-    appendMessage('bot', localAnswer);
-  } finally {
-    isSubmitting = false;
-    sendBtn.disabled = false;
-  }
-});
-
-// Word document generation tool
-document.getElementById('makeWord').addEventListener('click', async () => {
-  const subject = document.getElementById('subject').value;
-  const level = document.getElementById('level').value;
-  const prompt = promptEl.value.trim() || `Summary study guide for ${subject} (${level})`;
-
-  const loadingMsg = appendMessage('bot', '📝 جارٍ إنشاء مستند Word...');
-
-  try {
-    const res = await fetch('/api/word', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subject, level, prompt })
-    });
-
-    loadingMsg.remove();
-
-    if (!res.ok) {
-      throw new Error(`Failed to generate Word document (${res.status})`);
-    }
-
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Levarona_${subject}_Study_Guide.docx`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
-
-    appendMessage('bot', `✅ تم إنشاء وتحميل مستند Word بنجاح لمادة ${subject}!`);
-  } catch (err) {
-    loadingMsg.remove();
-    appendMessage('bot', `⚠️ تعذر إنشاء مستند Word عبر الخادم: ${err.message}. يجدر التأكد من تشغيل الخادم الخلفي وتكوين مفتاح الـ API.`, true);
-  }
-});
-
-// Educational image generation tool
-document.getElementById('makeImage').addEventListener('click', async () => {
-  const subject = document.getElementById('subject').value;
-  const prompt = promptEl.value.trim() || `Educational illustration for ${subject}`;
-
-  const loadingMsg = appendMessage('bot', '🎨 جارٍ إنشاء الصورة التعليمية...');
-
-  try {
-    const res = await fetch('/api/image', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subject, prompt })
-    });
-
-    loadingMsg.remove();
-
-    if (!res.ok) {
-      throw new Error(`Failed to generate image (${res.status})`);
-    }
-
-    const data = await res.json();
-    const imageUrl = data.imageUrl || data.url;
-
-    if (!imageUrl) {
-      throw new Error('No image URL returned from server');
-    }
-
-    const img = document.createElement('img');
-    img.src = imageUrl;
-    img.className = 'generatedImage';
-    img.alt = 'Educational generated image';
-
-    const container = document.createElement('div');
-    container.appendChild(img);
-
-    appendMessage('bot', `🎨 صورة تعليمية لمادة ${subject}:`, false, container);
-  } catch (err) {
-    loadingMsg.remove();
-    appendMessage('bot', `⚠️ تعذر إنشاء الصورة: ${err.message}. تأكد من تشغيل الخادم وتفعيل خدمة توليد الصور (DALL-E / Imagen).`, true);
-  }
-});
 </script>
 </body>
 </html>
