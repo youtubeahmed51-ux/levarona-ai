@@ -1,4 +1,4 @@
- import express from 'express';
+we import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
@@ -11,7 +11,56 @@ app.use(express.static(__dirname));
 
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.GEMINI_API_KEY;
-const CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || 'gemini-3.8-flash';
+const CHAT_MODEL =
+
+const express = require('express');
+const app = express();
+
+// Middleware to parse JSON and serve your static frontend files (index.html, etc.)
+app.use(express.json());
+app.use(express.static('.'));
+
+// Handle the /api/word route called by your frontend
+app.post('/api/word', async (req, res) => {
+    try {
+        const { subject, level, prompt } = req.body;
+        const apiKey = process.env.GEMINI_API_KEY; // Reads the secret key safely from Bento
+
+        if (!apiKey) {
+            return res.status(500).json({ error: "GEMINI_API_KEY is not configured on the server." });
+        }
+
+        // Build the prompt for Gemini based on user input
+        const userPrompt = prompt || `Create a study guide for ${subject} at level ${level}`;
+
+        // Call Google Gemini API securely from the backend
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: userPrompt }] }]
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+            const aiReply = data.candidates[0].content.parts[0].text;
+            // Send the AI response back to your web app frontend
+            res.json({ success: true, text: aiReply });
+        } else {
+            res.status(500).json({ error: "Failed to get a response from Gemini." });
+        }
+    } catch (error) {
+        console.error("Server Error:", error);
+        res.status(500).json({ error: "Internal server error." });
+    }
+});
+
+// Start the server on Bento's designated port
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Levarona AI server running on port ${PORT}`));
+ process.env.GEMINI_CHAT_MODEL || 'gemini-3.8-flash';
 const IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image';
 
 app.get('/api/health', (_req, res) => {
