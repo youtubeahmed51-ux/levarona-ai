@@ -1,5 +1,4 @@
- 
-import express from 'express';
+ import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
@@ -12,7 +11,7 @@ app.use(express.static(__dirname));
 
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.GEMINI_API_KEY;
-const CHAT_MODEL = 'gemini-3.8-flash';
+const CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || 'gemini-3.8-flash';
 const IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image';
 
 app.get('/api/health', (_req, res) => {
@@ -30,14 +29,32 @@ function extractText(data) {
   }
 
   const texts = [];
-  for (const step of data?.steps || []) {
-    if (step?.type !== 'model_output') continue;
-    for (const item of step.content || []) {
-      if (item?.type === 'text' && typeof item.text === 'string') {
-        texts.push(item.text);
+  if (Array.isArray(data?.steps)) {
+    for (const step of data.steps) {
+      if (step?.type !== 'model_output') continue;
+      if (Array.isArray(step.content)) {
+        for (const item of step.content) {
+          if (item?.type === 'text' && typeof item.text === 'string') {
+            texts.push(item.text);
+          }
+        }
       }
     }
   }
+
+  if (texts.length === 0 && Array.isArray(data?.candidates)) {
+    for (const candidate of data.candidates) {
+      const parts = candidate?.content?.parts;
+      if (Array.isArray(parts)) {
+        for (const part of parts) {
+          if (typeof part?.text === 'string') {
+            texts.push(part.text);
+          }
+        }
+      }
+    }
+  }
+
   return texts.join('\n').trim();
 }
 
@@ -46,38 +63,50 @@ async function callGemini(input) {
     throw new Error('GEMINI_API_KEY is missing from hosting settings.');
   }
 
-  const response = await fetch(
-    'https://generativelanguage.googleapis.com/v1beta/interactions',
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': API_KEY
-      },
-      body: JSON.stringify({
-        model: CHAT_MODEL,
-        input,
-        system_instruction:
-          'You are Levarona, a friendly and accurate educational AI tutor. Explain clearly, adapt to the student level, and answer in the language the student uses.',
-        
-generation_config: {
-  thinking_level: 'medium',
-  max_output_tokens: 4096
-},
+  // 25-second timeout safeguard to prevent infinite hanging on hard equations
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 25000);
 
+  try {
+    const response = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/interactions',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': API_KEY
         },
-        store: false
-      })
+        body: JSON.stringify({
+          model: CHAT_MODEL,
+          input,
+          system_instruction:
+            'You are Levarona, an expert educational AI tutor. Automatically detect the subject and difficulty level from the student query. Never ask the student to specify a subject or lesson name. Provide direct, precise, step-by-step answers immediately. Do not include conversational filler, greetings, or polite chat padding. Go straight to the answer and explanation in the language used by the student.',
+          generation_config: {
+            temperature: 0.3,
+            max_output_tokens: 2048
+          },
+          store: false
+        }),
+        signal: controller.signal
+      }
+    );
+
+    clearTimeout(timeoutId);
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data?.error?.message || `Gemini API error (Status ${response.status})`);
     }
-  );
 
-  const data = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    throw new Error(data?.error?.message || `Gemini error ${response.status}`);
+    return data;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('The request took too long and timed out. Please try a simpler question or break it into smaller steps.');
+    }
+    throw error;
   }
-
-  return data;
 }
 
 app.post('/api/chat', async (req, res) => {
@@ -91,34 +120,39 @@ app.post('/api/chat', async (req, res) => {
       attachments = []
     } = req.body || {};
 
+    const effectiveSubject = (!subject || subject === 'General') ? 'Auto-detect from student question' : subject;
+    const effectiveLevel = (!level || level === 'General') ? 'Auto-detect from student question' : level;
+
     const previousMessages = (Array.isArray(history) ? history : [])
       .slice(-10)
       .filter(item => item && typeof item.content === 'string')
-      .map(item =>
-        `${item.role === 'assistant' || item.role === 'model' ? 'Assistant' : 'Student'}: ${item.content.slice(0, 6000)}`
+      .map(item => 
+        `${item.role === 'assistant' || item.role === 'model' ? 'Assistant' : 'Student'}: ${item.content.slice(0, 4000)}`
       )
       .join('\n\n');
 
     const attachmentNotes = (Array.isArray(attachments) ? attachments : [])
       .slice(0, 5)
       .filter(file => typeof file?.text === 'string' && file.text.trim())
-      .map(file => `File ${file.name || ''}:\n${file.text.slice(0, 10000)}`)
+      .map(file => `File ${file.name || ''}:\n${file.text.slice(0, 8000)}`)
       .join('\n\n');
 
     const prompt = [
-      `You are Levarona, an educational AI tutor.`,
-      `Subject: ${subject}. Student level: ${level}. Mode: ${mode}.`,
-      previousMessages ? `Conversation:\n${previousMessages}` : '',
+      `Context -> Subject: ${effectiveSubject} | Level: ${effectiveLevel} | Mode: ${mode}`,
+      previousMessages ? `Conversation History:\n${previousMessages}` : '',
       attachmentNotes ? `Attachments:\n${attachmentNotes}` : '',
-      `Student's message:\n${String(message).slice(0, 20000)}`
+      `Student's question:\n${String(message).slice(0, 15000)}`
     ].filter(Boolean).join('\n\n');
 
     const data = await callGemini(prompt);
     const reply = extractText(data);
 
-    if (!reply) throw new Error('Gemini returned an empty answer.');
+    if (!reply) {
+      throw new Error('Gemini returned an empty response. Please try rephrasing your question.');
+    }
 
     res.json({ reply });
+
   } catch (error) {
     console.error('Chat error:', error.message);
     res.status(500).json({ error: error.message || 'Chat request failed.' });
@@ -136,6 +170,9 @@ app.post('/api/image', async (req, res) => {
       throw new Error('GEMINI_API_KEY is missing from hosting settings.');
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent`,
       {
@@ -151,9 +188,12 @@ app.post('/api/image', async (req, res) => {
             }]
           }],
           generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
-        })
+        }),
+        signal: controller.signal
       }
     );
+
+    clearTimeout(timeoutId);
 
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -166,6 +206,7 @@ app.post('/api/image', async (req, res) => {
     if (!image) throw new Error('No image returned. Check image model access and quota.');
 
     res.json({ image });
+
   } catch (error) {
     console.error('Image error:', error.message);
     res.status(500).json({ error: error.message || 'Image generation failed.' });
@@ -197,6 +238,7 @@ app.post('/api/word', async (req, res) => {
     );
     res.setHeader('Content-Disposition', 'attachment; filename="Levarona_Lesson.docx"');
     res.send(buffer);
+
   } catch (error) {
     console.error('Word export error:', error.message);
     res.status(500).json({ error: error.message || 'Word export failed.' });
@@ -210,5 +252,3 @@ app.get('*', (_req, res) => {
 app.listen(PORT, () => {
   console.log(`Levarona listening on port ${PORT}`);
 });
-
-         
